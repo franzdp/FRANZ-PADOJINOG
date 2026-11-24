@@ -1,0 +1,6 @@
+{
+  "name": "ARAL Math Bagacay ES",
+  "description": "Interactive Grade 4 ARAL Math worksheets and learning activities for Bagacay Elementary School students.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

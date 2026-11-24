@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">ARAL Math Bagacay ES</string>
+    <string name="hero_title">ARAL MATH for BAGACAY ES</string>
+    <string name="hero_subtitle">Interactive Learning Worksheets (Grades 2–6)</string>
+    <string name="mini_lesson">Mini Lesson</string>
+    <string name="check_answer">Check Answer</string>
+    <string name="next_item">Next</string>
+    <string name="previous_item">Previous</string>
+    <string name="scratchpad">Scratchpad</string>
+    <string name="hint">Hint</string>
+    <string name="onboarding_welcome">Welcome, ARAL Math Explorer!</string>
+    <string name="onboarding_subtitle">Enter your name, grade level, and school, then choose ARAL Grade 2 to 6.</string>
+    <string name="learner_name_label">Full Name</string>
+    <string name="learner_grade_label">Grade Level</string>
+    <string name="learner_school_label">School</string>
+    <string name="start_learning">Start / Continue Learning</string>
+    <string name="switch_learner">Switch Learner</string>
+    <string name="progress_report">Progress Report</string>
+    <string name="send_report_messenger">Send Progress Report (PDF)</string>
+    <string name="innovation_credit">This is an Innovation of FRANZ D. PADOJINOG</string>
+    <string name="school_logo_desc">Bagacay Elementary School Logo</string>
+    <string name="mastery_requirement_hint">Score at least 90% to unlock the next activity</string>
+</resources>
