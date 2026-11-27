@@ -324,15 +324,25 @@ fun GcfLcmRenderer(
 
     KidNumberPad(
       onDigit = { ch ->
-        if (activeField == 0 && problem.askGcf && gcfIn.length < 6) gcfIn += ch
-        else if (problem.askLcm && lcmIn.length < 7) lcmIn += ch
+        if (activeField == 0) {
+          if (problem.askGcf && gcfIn.length < 6) gcfIn += ch
+        } else {
+          if (problem.askLcm && lcmIn.length < 7) lcmIn += ch
+        }
       },
       onBackspace = {
-        if (activeField == 0 && problem.askGcf && gcfIn.isNotEmpty()) gcfIn = gcfIn.dropLast(1)
-        else if (problem.askLcm && lcmIn.isNotEmpty()) lcmIn = lcmIn.dropLast(1)
+        if (activeField == 0) {
+          if (problem.askGcf && gcfIn.isNotEmpty()) gcfIn = gcfIn.dropLast(1)
+        } else {
+          if (problem.askLcm && lcmIn.isNotEmpty()) lcmIn = lcmIn.dropLast(1)
+        }
       },
       onClear = {
-        if (activeField == 0 && problem.askGcf) gcfIn = "" else lcmIn = ""
+        if (activeField == 0) {
+          if (problem.askGcf) gcfIn = ""
+        } else {
+          if (problem.askLcm) lcmIn = ""
+        }
       },
       onSubmit = {
         val gOk = !problem.askGcf || gcfIn.toIntOrNull() == problem.expectedGcf

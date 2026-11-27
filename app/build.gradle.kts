@@ -16,8 +16,10 @@ android {
     applicationId = "com.aistudio.aralmath.bgcyes"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    val propVersionCode = (project.findProperty("appVersionCode") as String?)?.toIntOrNull()
+    val propVersionName = (project.findProperty("appVersionName") as String?)?.takeIf { it.isNotBlank() }
+    versionCode = propVersionCode ?: 2
+    versionName = propVersionName ?: "1.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

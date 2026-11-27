@@ -44,6 +44,8 @@ fun OnboardingScreen(
   state: HomeUiState,
   onSubmitProfile: (name: String, gradeLevel: String, school: String, chosenProgram: AralGrade) -> Unit,
   onSendProgressReportForLearner: (LearnerProgressRecord) -> Unit,
+  onSaveBackup: () -> Unit,
+  onRestoreBackup: () -> Unit,
   onDismissBanner: () -> Unit,
 ) {
   var name by rememberSaveable { mutableStateOf("") }
@@ -374,6 +376,69 @@ fun OnboardingScreen(
               )
             },
           )
+        }
+      }
+
+      item {
+        Surface(
+          color = MaterialTheme.colorScheme.surface,
+          shape = RoundedCornerShape(18.dp),
+          modifier = Modifier
+            .fillMaxWidth()
+            .border(1.dp, OutlineSoft, RoundedCornerShape(18.dp)),
+        ) {
+          Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+          ) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+              Icon(Icons.Default.Backup, contentDescription = null, tint = BagacayBlue, modifier = Modifier.size(20.dp))
+              Text(
+                text = stringResource(R.string.backup_records_title),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = InkDark,
+              )
+            }
+            Text(
+              text = stringResource(R.string.backup_records_subtitle),
+              style = MaterialTheme.typography.bodySmall,
+              color = InkMuted,
+            )
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+              OutlinedButton(
+                onClick = onSaveBackup,
+                enabled = state.knownLearners.isNotEmpty(),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                  .weight(1f)
+                  .defaultMinSize(minHeight = 48.dp)
+                  .testTag("onboarding_save_backup_button"),
+              ) {
+                Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.save_backup), style = MaterialTheme.typography.labelLarge)
+              }
+              OutlinedButton(
+                onClick = onRestoreBackup,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                  .weight(1f)
+                  .defaultMinSize(minHeight = 48.dp)
+                  .testTag("onboarding_restore_backup_button"),
+              ) {
+                Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.restore_backup), style = MaterialTheme.typography.labelLarge)
+              }
+            }
+          }
         }
       }
 

@@ -61,6 +61,8 @@ fun HomeScreen(
   onOpenWorksheet: (Int, Int?) -> Unit,
   onSwitchLearner: () -> Unit,
   onGenerateProgressReport: () -> Unit,
+  onSaveBackup: () -> Unit,
+  onRestoreBackup: () -> Unit,
   onDismissBanner: () -> Unit,
 ) {
   val context = LocalContext.current
@@ -109,6 +111,8 @@ fun HomeScreen(
               Toast.makeText(context, "No PDF viewer app installed on this device.", Toast.LENGTH_SHORT).show()
             }
           },
+          onSaveBackup = onSaveBackup,
+          onRestoreBackup = onRestoreBackup,
         )
       }
 
@@ -502,6 +506,8 @@ private fun ProgressReportActionCard(
   state: HomeUiState,
   onGenerateProgressReport: () -> Unit,
   onViewLastPdf: () -> Unit,
+  onSaveBackup: () -> Unit,
+  onRestoreBackup: () -> Unit,
 ) {
   Surface(
     color = BagacayBlueLight.copy(alpha = 0.55f),
@@ -630,6 +636,38 @@ private fun ProgressReportActionCard(
             Spacer(Modifier.width(4.dp))
             Text("View PDF", style = MaterialTheme.typography.labelMedium)
           }
+        }
+      }
+
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        OutlinedButton(
+          onClick = onSaveBackup,
+          enabled = state.knownLearners.isNotEmpty(),
+          shape = RoundedCornerShape(12.dp),
+          modifier = Modifier
+            .weight(1f)
+            .defaultMinSize(minHeight = 48.dp)
+            .testTag("home_save_backup_button"),
+        ) {
+          Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+          Spacer(Modifier.width(5.dp))
+          Text(stringResource(R.string.save_backup), style = MaterialTheme.typography.labelMedium)
+        }
+        OutlinedButton(
+          onClick = onRestoreBackup,
+          shape = RoundedCornerShape(12.dp),
+          modifier = Modifier
+            .weight(1f)
+            .defaultMinSize(minHeight = 48.dp)
+            .testTag("home_restore_backup_button"),
+        ) {
+          Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
+          Spacer(Modifier.width(5.dp))
+          Text(stringResource(R.string.restore_backup), style = MaterialTheme.typography.labelMedium)
         }
       }
     }

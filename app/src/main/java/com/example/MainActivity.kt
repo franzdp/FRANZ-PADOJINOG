@@ -2,8 +2,10 @@ package com.example
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -46,6 +48,27 @@ fun AralMathApp(mathViewModel: MathViewModel = viewModel()) {
   val homeState by mathViewModel.homeState.collectAsStateWithLifecycle()
   val activeState by mathViewModel.activeState.collectAsStateWithLifecycle()
   val navCommand by mathViewModel.navigationCommand.collectAsStateWithLifecycle()
+
+  val createBackupLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.CreateDocument("application/json"),
+  ) { uri ->
+    if (uri != null) {
+      mathViewModel.exportRecordsBackupToUri(uri)
+    }
+  }
+  val openBackupLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.OpenDocument(),
+  ) { uri ->
+    if (uri != null) {
+      mathViewModel.importRecordsBackupFromUri(uri)
+    }
+  }
+  val launchSaveBackup = {
+    createBackupLauncher.launch("ARAL-Math-Records-Backup.json")
+  }
+  val launchRestoreBackup = {
+    openBackupLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
+  }
 
   // Automatically open Messenger with the generated PDF Progress Report attached
   LaunchedEffect(homeState.pendingPdfReport) {
@@ -113,6 +136,8 @@ fun AralMathApp(mathViewModel: MathViewModel = viewModel()) {
             learnerOverride = learner,
           )
         },
+        onSaveBackup = launchSaveBackup,
+        onRestoreBackup = launchRestoreBackup,
         onDismissBanner = mathViewModel::clearStatusBanner,
       )
     }
@@ -130,6 +155,8 @@ fun AralMathApp(mathViewModel: MathViewModel = viewModel()) {
         },
         onSwitchLearner = mathViewModel::switchLearner,
         onGenerateProgressReport = { mathViewModel.generateProgressReport() },
+        onSaveBackup = launchSaveBackup,
+        onRestoreBackup = launchRestoreBackup,
         onDismissBanner = mathViewModel::clearStatusBanner,
       )
     }

@@ -1,6 +1,7 @@
 package com.example.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.DeviceAddressInfo
@@ -216,9 +217,17 @@ class MathViewModel(application: Application) : AndroidViewModel(application) {
       val initialMeta = recordsStore.cloudMetaFlow.first()
 
       allLearnersMap = initialLearners
-      activeLearnerKey = initialActiveKey
+      val matchedActiveKey = initialActiveKey?.let { key ->
+        when {
+          initialLearners.containsKey(key) -> key
+          initialLearners.containsKey(SheetCoordinateHelper.normalizeLearnerName(key)) ->
+            SheetCoordinateHelper.normalizeLearnerName(key)
+          else -> null
+        }
+      }
+      activeLearnerKey = matchedActiveKey
 
-      val initialLearner = initialActiveKey?.let { initialLearners[it] }
+      val initialLearner = matchedActiveKey?.let { initialLearners[it] }
       val initialGrade = initialLearner?.activeGrade ?: AralGrade.GRADE_4
       _homeState.update {
         it.copy(
@@ -335,6 +344,57 @@ class MathViewModel(application: Application) : AndroidViewModel(application) {
         pendingPdfReport = null,
         statusBannerMessage = bannerMessage ?: it.statusBannerMessage,
       )
+    }
+  }
+
+  fun exportRecordsBackupToUri(uri: Uri) {
+    viewModelScope.launch {
+      runCatching {
+        val json = withContext(Dispatchers.IO) { recordsStore.exportBackupJson() }
+        withContext(Dispatchers.IO) {
+          val resolver = getApplication<Application>().contentResolver
+          resolver.openOutputStream(uri)?.use { out ->
+            out.write(json.toByteArray(Charsets.UTF_8))
+            out.flush()
+          } ?: error("Could not open selected destination file.")
+        }
+      }.onSuccess {
+        _homeState.update {
+          it.copy(statusBannerMessage = "Learner records backup saved! You can restore this file on any updated version or device.")
+        }
+      }.onFailure { err ->
+        _homeState.update {
+          it.copy(statusBannerMessage = "Could not save backup: ${err.localizedMessage ?: "Unknown error"}")
+        }
+      }
+    }
+  }
+
+  fun importRecordsBackupFromUri(uri: Uri) {
+    viewModelScope.launch {
+      runCatching {
+        val raw = withContext(Dispatchers.IO) {
+          val resolver = getApplication<Application>().contentResolver
+          resolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
+            ?: error("Could not read selected backup file.")
+        }
+        val result = recordsStore.importBackupJson(raw)
+        val refreshedKey = recordsStore.activeLearnerKeyFlow.first()
+        if (activeLearnerKey == null && refreshedKey != null) {
+          activeLearnerKey = refreshedKey
+        }
+        result
+      }.onSuccess { res ->
+        _homeState.update {
+          it.copy(
+            statusBannerMessage = "Restored ${res.importedLearners} learner(s) (${res.totalActivitiesMerged} activity records merged safely).",
+          )
+        }
+      }.onFailure { err ->
+        _homeState.update {
+          it.copy(statusBannerMessage = "Restore failed: ${err.localizedMessage ?: "Invalid backup file"}")
+        }
+      }
     }
   }
 

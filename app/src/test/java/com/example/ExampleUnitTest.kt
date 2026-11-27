@@ -490,4 +490,150 @@ class ExampleUnitTest {
     assertTrue(row1.difficultyItems.any { it.itemNumber == 3 && it.wrongTries == 3 && it.stillWrong })
     assertTrue(row1.difficultyItems.any { it.itemNumber == 1 && it.wrongTries == 2 && !it.stillWrong })
   }
+
+  @Test
+  fun mergeTwoLearnerRecords_preservesHigherScoresAndAllGrades() {
+    val olderRecord = LearnerProgressRecord(
+      profile = LearnerProfile(
+        name = "Pedro Penduko",
+        gradeLevel = "Grade 3",
+        school = "Bagacay Elementary School",
+        deviceAddress = "11:22:33:44:55:66",
+        sheetRowNumber = 4,
+      ),
+      activeGrade = AralGrade.GRADE_3,
+      gradeProgress = mapOf(
+        AralGrade.GRADE_3 to com.example.model.GradeProgressState(
+          lastWorksheetId = 2,
+          records = mapOf(
+            1 to ActivityRecord(
+              worksheetId = 1,
+              correctCount = 4,
+              totalItems = 5,
+              stars = 2,
+              timestamp = "2026-11-01 08:00:00 AM",
+              correctIndices = setOf(0, 1, 2, 3),
+              wrongIndices = setOf(4),
+              wrongAttemptCounts = mapOf(4 to 2),
+            ),
+          ),
+        ),
+        AralGrade.GRADE_4 to com.example.model.GradeProgressState(
+          lastWorksheetId = 5,
+          sheetRowNumber = 4,
+          records = mapOf(
+            1 to ActivityRecord(
+              worksheetId = 1,
+              correctCount = 19,
+              totalItems = 20,
+              stars = 3,
+              timestamp = "2026-10-20 09:00:00 AM",
+            ),
+          ),
+        ),
+      ),
+    )
+
+    val newerLocal = LearnerProgressRecord(
+      profile = LearnerProfile(
+        name = "Pedro Penduko",
+        gradeLevel = "Grade 3",
+        school = "Bagacay Elementary School",
+        deviceAddress = "11:22:33:44:55:66",
+      ),
+      activeGrade = AralGrade.GRADE_3,
+      gradeProgress = mapOf(
+        AralGrade.GRADE_3 to com.example.model.GradeProgressState(
+          lastWorksheetId = 3,
+          records = mapOf(
+            1 to ActivityRecord(
+              worksheetId = 1,
+              correctCount = 5,
+              totalItems = 5,
+              stars = 3,
+              timestamp = "2026-11-02 09:00:00 AM",
+              correctIndices = setOf(0, 1, 2, 3, 4),
+              wrongIndices = emptySet(),
+              wrongAttemptCounts = mapOf(4 to 2),
+            ),
+          ),
+        ),
+      ),
+    )
+
+    val merged = com.example.data.LearnerRecordsStore.mergeTwoLearnerRecords(newerLocal, olderRecord)
+    assertEquals(4, merged.profile.sheetRowNumber)
+    assertEquals(5, merged.recordsFor(AralGrade.GRADE_3)[1]?.correctCount)
+    assertEquals(3, merged.recordsFor(AralGrade.GRADE_3)[1]?.stars)
+    assertEquals(2, merged.recordsFor(AralGrade.GRADE_3)[1]?.wrongAttemptCounts?.get(4))
+    assertEquals(19, merged.recordsFor(AralGrade.GRADE_4)[1]?.correctCount)
+    assertEquals(4, merged.progressFor(AralGrade.GRADE_4).sheetRowNumber)
+  }
+
+  @Test
+  fun multiBlankMapping_andBlankCountsMatchAcrossAllGrades() {
+    val g3Ws7Item1 = listOf(10, 20, 30, null, null, null, null, 80, 90, 100)
+    assertEquals(
+      listOf(null, null, null, 0, 1, 2, 3, null, null, null),
+      com.example.ui.screens.mapSkipSequenceBlankIndices(g3Ws7Item1),
+    )
+
+    val patternTokens = listOf(
+      com.example.model.PatternToken(com.example.model.PatternTokenKind.TEXT, "2"),
+      com.example.model.PatternToken(com.example.model.PatternTokenKind.BLANK),
+      com.example.model.PatternToken(com.example.model.PatternTokenKind.TEXT, "6"),
+      com.example.model.PatternToken(com.example.model.PatternTokenKind.BLANK),
+    )
+    assertEquals(
+      listOf(null, 0, null, 1),
+      com.example.ui.screens.mapPatternBlankIndices(patternTokens),
+    )
+
+    for (grade in AralGrade.entries) {
+      for (ws in WorksheetCatalog.getWorksheets(grade)) {
+        val problems = WorksheetProblemsRepository.getProblemsForWorksheet(grade, ws.id)
+        for (p in problems) {
+          when (p) {
+            is com.example.model.SkipCountGridProblem -> {
+              if (p.style == com.example.model.SkipGridStyle.OBJECT_SEQUENCE ||
+                p.style == com.example.model.SkipGridStyle.ANIMAL_TRACK
+              ) {
+                val blanks = p.sequenceValues.count { it == null }
+                assertTrue("${grade.shortLabel} WS ${ws.id} item ${p.itemNumber} should have blanks", blanks > 0)
+                assertEquals(
+                  "${grade.shortLabel} WS ${ws.id} item ${p.itemNumber} skip-count blanks mismatch",
+                  p.expectedBlanks.size,
+                  blanks,
+                )
+              }
+            }
+            is MathProblem.PatternProblem -> {
+              val blanks = p.tokens.count { it.kind == com.example.model.PatternTokenKind.BLANK }
+              assertTrue("${grade.shortLabel} WS ${ws.id} item ${p.itemNumber} pattern should have blanks", blanks > 0)
+              assertEquals(
+                "${grade.shortLabel} WS ${ws.id} item ${p.itemNumber} pattern blanks mismatch",
+                p.expectedAnswers.size,
+                blanks,
+              )
+            }
+            else -> Unit
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  fun grade5Ws30_angleNameAnnouncesEnteredAngleWithoutSpoilers() {
+    val ws30 = WorksheetProblemsRepository.getProblemsForWorksheet(AralGrade.GRADE_5, 30)
+    val item1 = ws30[0] as MathProblem.AngleNameProblem
+
+    // Entering ∠H or <h or h should be marked correct and announce ∠H (never ∠CHE)
+    assertEquals(true to "∠H", com.example.ui.screens.evaluateAngleNameInput("<h", item1.validAnswers))
+    assertEquals(true to "∠H", com.example.ui.screens.evaluateAngleNameInput("∠H", item1.validAnswers))
+    assertEquals(true to "∠H", com.example.ui.screens.evaluateAngleNameInput("∠<h", item1.validAnswers))
+    assertEquals(true to "∠EHC", com.example.ui.screens.evaluateAngleNameInput("ehc", item1.validAnswers))
+    assertEquals(true to "∠CHE", com.example.ui.screens.evaluateAngleNameInput("∠che", item1.validAnswers))
+    assertFalse(com.example.ui.screens.evaluateAngleNameInput("∠CEH", item1.validAnswers).first)
+  }
 }

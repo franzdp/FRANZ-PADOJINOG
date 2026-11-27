@@ -426,15 +426,25 @@ fun FractionBlankRenderer(
     }
     KidNumberPad(
       onDigit = {
-        if (active == 0 && problem.askNum && numIn.length < 3) numIn += it
-        else if (denIn.length < 3) denIn += it
+        if (active == 0) {
+          if (problem.askNum && numIn.length < 3) numIn += it
+        } else {
+          if (problem.askDen && denIn.length < 3) denIn += it
+        }
       },
       onBackspace = {
-        if (active == 0 && problem.askNum && numIn.isNotEmpty()) numIn = numIn.dropLast(1)
-        else if (denIn.isNotEmpty()) denIn = denIn.dropLast(1)
+        if (active == 0) {
+          if (problem.askNum && numIn.isNotEmpty()) numIn = numIn.dropLast(1)
+        } else {
+          if (problem.askDen && denIn.isNotEmpty()) denIn = denIn.dropLast(1)
+        }
       },
       onClear = {
-        if (active == 0 && problem.askNum) numIn = "" else denIn = ""
+        if (active == 0) {
+          if (problem.askNum) numIn = ""
+        } else {
+          if (problem.askDen) denIn = ""
+        }
       },
       onSubmit = {
         val numOk = !problem.askNum || numIn.toIntOrNull() == problem.num
@@ -447,11 +457,17 @@ fun FractionBlankRenderer(
   }
 }
 
+internal fun mapPatternBlankIndices(tokens: List<com.example.model.PatternToken>): List<Int?> {
+  var nextBlank = 0
+  return tokens.map { tok -> if (tok.kind == PatternTokenKind.BLANK) nextBlank++ else null }
+}
+
 @Composable
 fun PatternRenderer(
   problem: MathProblem.PatternProblem,
   onResult: (AnswerCheckResult) -> Unit,
 ) {
+  val blankIndexByToken = remember(problem) { mapPatternBlankIndices(problem.tokens) }
   val blankCount = problem.tokens.count { it.kind == PatternTokenKind.BLANK }
   val inputs = remember(problem) { mutableStateListOf<String>().apply { repeat(blankCount) { add("") } } }
   var activeBlank by remember(problem) { mutableStateOf(0) }
@@ -468,10 +484,9 @@ fun PatternRenderer(
       horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
       verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-      var bIdx = 0
-      problem.tokens.forEach { tok ->
-        if (tok.kind == PatternTokenKind.BLANK) {
-          val curIdx = bIdx++
+      problem.tokens.forEachIndexed { tokIdx, tok ->
+        val curIdx = blankIndexByToken.getOrNull(tokIdx)
+        if (tok.kind == PatternTokenKind.BLANK && curIdx != null) {
           val text = inputs.getOrElse(curIdx) { "" }
           Box(
             modifier = Modifier
@@ -480,7 +495,8 @@ fun PatternRenderer(
               .background(if (activeBlank == curIdx) BagacayBlueLight else Color.White)
               .border(2.dp, if (activeBlank == curIdx) BagacayBlue else MangoGold, RoundedCornerShape(12.dp))
               .clickable { activeBlank = curIdx }
-              .padding(horizontal = 8.dp, vertical = 4.dp),
+              .padding(horizontal = 8.dp, vertical = 4.dp)
+              .testTag("pattern_blank_$curIdx"),
             contentAlignment = Alignment.Center,
           ) {
             Text(text.replace("_", " ").ifEmpty { "?" }, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = BagacayBlue)
@@ -552,14 +568,22 @@ fun PatternRenderer(
     } else {
       KidNumberPad(
         onDigit = { ch ->
-          val cur = inputs.getOrElse(activeBlank) { "" }
-          if (cur.length < 6) inputs[activeBlank] = cur + ch
+          if (activeBlank in inputs.indices) {
+            val cur = inputs[activeBlank]
+            if (cur.length < 6) inputs[activeBlank] = cur + ch
+          }
         },
         onBackspace = {
-          val cur = inputs.getOrElse(activeBlank) { "" }
-          if (cur.isNotEmpty()) inputs[activeBlank] = cur.dropLast(1)
+          if (activeBlank in inputs.indices) {
+            val cur = inputs[activeBlank]
+            if (cur.isNotEmpty()) inputs[activeBlank] = cur.dropLast(1)
+          }
         },
-        onClear = { inputs[activeBlank] = "" },
+        onClear = {
+          if (activeBlank in inputs.indices) {
+            inputs[activeBlank] = ""
+          }
+        },
         onSubmit = {
           onResult(AnswerChecker.checkPatternAnswer(problem, inputs.toList()))
         },

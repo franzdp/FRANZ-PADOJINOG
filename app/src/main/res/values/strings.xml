@@ -20,4 +20,8 @@
     <string name="innovation_credit">This is an Innovation of FRANZ D. PADOJINOG</string>
     <string name="school_logo_desc">Bagacay Elementary School Logo</string>
     <string name="mastery_requirement_hint">Score at least 90% to unlock the next activity</string>
+    <string name="backup_records_title">Learner Records Backup &amp; Update Safety</string>
+    <string name="backup_records_subtitle">App updates preserve records automatically. Save or restore a backup file anytime before switching devices.</string>
+    <string name="save_backup">Save Backup</string>
+    <string name="restore_backup">Restore Backup</string>
 </resources>

@@ -273,9 +273,15 @@ fun ExpandedFormRenderer(
     }
 
     KidNumberPad(
-      onDigit = { ch -> if (inputs[active].length < 4) inputs[active] = inputs[active] + ch },
-      onBackspace = { if (inputs[active].isNotEmpty()) inputs[active] = inputs[active].dropLast(1) },
-      onClear = { inputs[active] = "" },
+      onDigit = { ch ->
+        if (active in inputs.indices && inputs[active].length < 4) inputs[active] = inputs[active] + ch
+      },
+      onBackspace = {
+        if (active in inputs.indices && inputs[active].isNotEmpty()) inputs[active] = inputs[active].dropLast(1)
+      },
+      onClear = {
+        if (active in inputs.indices) inputs[active] = ""
+      },
       onSubmit = {
         val expectedList = when {
           usePlaceNames && isThreeDigit -> listOf(hDigit, tDigit, oDigit)

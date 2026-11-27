@@ -298,14 +298,20 @@ fun GeometryMeasureRenderer(
     KidNumberPad(
       showDecimal = anyDecimal,
       onDigit = { ch ->
-        val cur = inputs.getOrElse(activeField) { "" }
-        if (cur.length < 10) inputs[activeField] = cur + ch
+        if (activeField in inputs.indices) {
+          val cur = inputs[activeField]
+          if (cur.length < 10) inputs[activeField] = cur + ch
+        }
       },
       onBackspace = {
-        val cur = inputs.getOrElse(activeField) { "" }
-        if (cur.isNotEmpty()) inputs[activeField] = cur.dropLast(1)
+        if (activeField in inputs.indices) {
+          val cur = inputs[activeField]
+          if (cur.isNotEmpty()) inputs[activeField] = cur.dropLast(1)
+        }
       },
-      onClear = { inputs[activeField] = "" },
+      onClear = {
+        if (activeField in inputs.indices) inputs[activeField] = ""
+      },
       onSubmit = {
         val ok = problem.fields.indices.all { idx ->
           val spec = problem.fields[idx]

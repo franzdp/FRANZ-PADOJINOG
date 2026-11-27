@@ -371,11 +371,13 @@ fun WorksheetActivityScreen(
                 }
               }
 
-              ProblemBodyDispatcher(
-                problem = problem,
-                accentColor = accent,
-                onResult = onRecordResult,
-              )
+              key(state.grade, state.worksheet.id, problem.itemNumber) {
+                ProblemBodyDispatcher(
+                  problem = problem,
+                  accentColor = accent,
+                  onResult = onRecordResult,
+                )
+              }
             }
           }
         }

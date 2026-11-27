@@ -374,15 +374,21 @@ fun WordProblemMultiFieldRenderer(
     KidNumberPad(
       showDecimal = anyDecimal,
       onDigit = { ch ->
-        val cur = inputs[activeIdx]
-        if (ch == "." && "." in cur) return@KidNumberPad
-        if (cur.length < 11) inputs[activeIdx] = cur + ch
+        if (activeIdx in inputs.indices) {
+          val cur = inputs[activeIdx]
+          if (ch == "." && "." in cur) return@KidNumberPad
+          if (cur.length < 11) inputs[activeIdx] = cur + ch
+        }
       },
       onBackspace = {
-        val cur = inputs[activeIdx]
-        if (cur.isNotEmpty()) inputs[activeIdx] = cur.dropLast(1)
+        if (activeIdx in inputs.indices) {
+          val cur = inputs[activeIdx]
+          if (cur.isNotEmpty()) inputs[activeIdx] = cur.dropLast(1)
+        }
       },
-      onClear = { inputs[activeIdx] = "" },
+      onClear = {
+        if (activeIdx in inputs.indices) inputs[activeIdx] = ""
+      },
       onSubmit = {
         val ok = problem.fields.indices.all { i ->
           val spec = problem.fields[i]
@@ -462,6 +468,23 @@ fun OrderOfOpsRenderer(
   }
 }
 
+internal fun evaluateAngleNameInput(
+  rawInput: String,
+  validAnswers: List<String>,
+): Pair<Boolean, String> {
+  val cleaned = rawInput
+    .trim()
+    .uppercase()
+    .replace(" ", "")
+    .trimStart('∠', '<')
+  val normalizedValid = validAnswers.map {
+    it.trim().uppercase().replace(" ", "").trimStart('∠', '<')
+  }
+  val ok = cleaned.isNotEmpty() && cleaned in normalizedValid
+  val formatted = if (cleaned.isNotEmpty()) "∠$cleaned" else ""
+  return ok to formatted
+}
+
 @Composable
 fun AngleNameRenderer(
   problem: MathProblem.AngleNameProblem,
@@ -516,18 +539,16 @@ fun AngleNameRenderer(
 
     Button(
       onClick = {
-        val cleaned = textInput.trim().uppercase().replace(" ", "").removePrefix("∠")
-        val normalizedValid = problem.validAnswers.map { it.trim().uppercase().replace(" ", "").removePrefix("∠") }
-        val ok = cleaned.isNotEmpty() && cleaned in normalizedValid
+        val (ok, enteredAngle) = evaluateAngleNameInput(textInput, problem.validAnswers)
         onResult(
           AnswerCheckResult(
             isCorrect = ok,
-            message = if (ok) "Great angle naming! ${problem.exampleAnswer}" else "Put the vertex letter in the middle or use the interior number.",
-            expectedDisplay = problem.validAnswers.take(3).joinToString(" / "),
+            message = if (ok) "Great angle naming! $enteredAngle" else "Put the vertex letter in the middle or use the interior number.",
+            expectedDisplay = if (ok) enteredAngle else problem.validAnswers.take(3).joinToString(" / "),
           ),
         )
       },
-      enabled = textInput.replace("∠", "").isNotBlank(),
+      enabled = textInput.trim().trimStart('∠', '<').isNotBlank(),
       modifier = Modifier
         .fillMaxWidth()
         .height(54.dp)

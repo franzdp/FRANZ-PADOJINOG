@@ -241,12 +241,22 @@ fun StampObjectsRenderer(
   }
 }
 
+internal fun mapSkipSequenceBlankIndices(sequenceValues: List<Int?>): List<Int?> {
+  var nextBlank = 0
+  return sequenceValues.map { value -> if (value == null) nextBlank++ else null }
+}
+
 @Composable
 fun SkipCountGridRenderer(
   problem: SkipCountGridProblem,
   onResult: (AnswerCheckResult) -> Unit,
 ) {
-  val blankCount = problem.expectedBlanks.size.coerceAtLeast(1)
+  val blankIndexByPosition = remember(problem) { mapSkipSequenceBlankIndices(problem.sequenceValues) }
+  val blankCount = when (problem.style) {
+    SkipGridStyle.OBJECT_SEQUENCE, SkipGridStyle.ANIMAL_TRACK ->
+      maxOf(problem.expectedBlanks.size, problem.sequenceValues.count { it == null }, 1)
+    else -> problem.expectedBlanks.size.coerceAtLeast(1)
+  }
   val inputs = remember(problem) { mutableStateListOf<String>().apply { repeat(blankCount) { add("") } } }
   var activeIdx by remember(problem) { mutableStateOf(0) }
 
@@ -283,7 +293,7 @@ fun SkipCountGridRenderer(
                 ) {
                   Text(
                     text = when {
-                      isTarget -> inputs[0].ifEmpty { "?" }
+                      isTarget -> inputs.getOrElse(0) { "" }.ifEmpty { "?" }
                       isGiven -> "$n"
                       else -> "__"
                     },
@@ -316,20 +326,19 @@ fun SkipCountGridRenderer(
             }
           }
         }
-        AnswerDisplayBox(inputs[0], "Total (${problem.iconLabel})")
+        AnswerDisplayBox(inputs.getOrElse(0) { "" }, "Total (${problem.iconLabel})")
       }
 
       SkipGridStyle.OBJECT_SEQUENCE, SkipGridStyle.ANIMAL_TRACK -> {
-        var bCounter = 0
         @OptIn(ExperimentalLayoutApi::class)
         FlowRow(
           horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
           verticalArrangement = Arrangement.spacedBy(8.dp),
           modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(WarmSurfaceVariant).padding(12.dp),
         ) {
-          problem.sequenceValues.forEach { v ->
-            if (v == null) {
-              val bIdx = bCounter++
+          problem.sequenceValues.forEachIndexed { seqIdx, v ->
+            val bIdx = blankIndexByPosition.getOrNull(seqIdx)
+            if (v == null && bIdx != null) {
               Box(
                 modifier = Modifier
                   .defaultMinSize(minWidth = 54.dp, minHeight = 48.dp)
@@ -337,7 +346,8 @@ fun SkipCountGridRenderer(
                   .background(if (activeIdx == bIdx) BagacayBlueLight else Color.White)
                   .border(2.dp, if (activeIdx == bIdx) BagacayBlue else MangoGold, RoundedCornerShape(12.dp))
                   .clickable { activeIdx = bIdx }
-                  .padding(horizontal = 8.dp),
+                  .padding(horizontal = 8.dp)
+                  .testTag("skip_blank_$bIdx"),
                 contentAlignment = Alignment.Center,
               ) {
                 Text(inputs.getOrElse(bIdx) { "" }.ifEmpty { "?" }, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = BagacayBlue)
@@ -345,7 +355,7 @@ fun SkipCountGridRenderer(
             } else {
               Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.defaultMinSize(minWidth = 48.dp, minHeight = 48.dp).border(1.dp, OutlineSoft, RoundedCornerShape(12.dp))) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(horizontal = 10.dp)) {
-                  Text("$v", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = InkDark)
+                  Text("${v ?: ""}", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = InkDark)
                 }
               }
             }
@@ -356,14 +366,22 @@ fun SkipCountGridRenderer(
 
     KidNumberPad(
       onDigit = { ch ->
-        val cur = inputs.getOrElse(activeIdx) { "" }
-        if (cur.length < 4) inputs[activeIdx] = cur + ch
+        if (activeIdx in inputs.indices) {
+          val cur = inputs[activeIdx]
+          if (cur.length < 4) inputs[activeIdx] = cur + ch
+        }
       },
       onBackspace = {
-        val cur = inputs.getOrElse(activeIdx) { "" }
-        if (cur.isNotEmpty()) inputs[activeIdx] = cur.dropLast(1)
+        if (activeIdx in inputs.indices) {
+          val cur = inputs[activeIdx]
+          if (cur.isNotEmpty()) inputs[activeIdx] = cur.dropLast(1)
+        }
       },
-      onClear = { inputs[activeIdx] = "" },
+      onClear = {
+        if (activeIdx in inputs.indices) {
+          inputs[activeIdx] = ""
+        }
+      },
       onSubmit = {
         val ok = inputs.size == problem.expectedBlanks.size &&
           inputs.zip(problem.expectedBlanks).all { (u, e) -> u.toIntOrNull() == e }

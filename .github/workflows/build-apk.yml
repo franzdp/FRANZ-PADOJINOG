@@ -50,7 +50,11 @@ jobs:
           fi
 
       - name: Build Debug APK
-        run: gradle :app:assembleDebug --no-daemon
+        run: |
+          NEXT_VERSION_CODE=$((${{ github.run_number }} + 1))
+          gradle :app:assembleDebug --no-daemon \
+            -PappVersionCode="${NEXT_VERSION_CODE}" \
+            -PappVersionName="1.${{ github.run_number }}"
 
       - name: Prepare APK with friendly name
         run: |
